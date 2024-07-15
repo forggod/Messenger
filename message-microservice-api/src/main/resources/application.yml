@@ -1,0 +1,38 @@
+---
+token:
+  secret: hbg0ac090h4kdponjo1009vhnqjvubfui
+
+server:
+    port: 8082
+
+logging:
+  level:
+    org:
+      apache:
+        kafka: OFF
+kafka:
+  server: kafka:9092
+  group:
+    id: consumer-message
+
+spring:
+  jpa:
+    show-sql: true
+    database: postgresql
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+  redis:
+    host: redis
+    port: 6379
+  datasource:
+    url: jdbc:postgresql://127.0.0.1/postgres?currentSchema=public
+    username: postgres
+    password: postpass
+    driver-class-name: org.postgresql.Driver
+
+  kafka:
+    consumer:
+      bootstrap-servers: kafka:9092
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer

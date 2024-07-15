@@ -1,0 +1,15 @@
+---
+token:
+  secret: hbg0ac090h4kdponjo1009vhnqjvubfui
+  expirationAt: 60m
+
+server:
+    port: 9090
+
+
+spring:
+  datasource:
+    url: jdbc:postgresql://127.0.0.1/postgres
+    username: postgres
+    password: postpass
+    driver-class-name: org.postgresql.Driver

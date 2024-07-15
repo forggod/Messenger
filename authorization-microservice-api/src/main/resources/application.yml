@@ -1,0 +1,31 @@
+---
+token:
+  secret: hbg0ac090h4kdponjo1009vhnqjvubfui
+  expirationAt:
+    access: 15m
+    refresh: 7d
+
+server:
+  port: 8081
+
+kafka:
+  server: kafka:9092
+  producer:
+    id: producer-message
+
+spring:
+  redis:
+    host: redis
+    port: 6379
+
+  datasource:
+    url: jdbc:postgresql://127.0.0.1/postgres
+    username: postgres
+    password: postpass
+    driver-class-name: org.postgresql.Driver
+
+  kafka:
+    producer:
+      bootstrap-servers: kafka:9092
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer

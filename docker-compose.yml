@@ -1,0 +1,149 @@
+# Run file
+# docker-compose -f .\docker-compose.yml up
+
+version: '3'
+networks:
+  shared-network01:
+    driver: bridge
+  auth-network01:
+    driver: bridge
+  message-network01:
+    driver: bridge
+  broker-network:
+    driver: bridge
+
+services:
+# Web server
+  web-server:
+    container_name: web-server
+    build: ./react-web-server
+    image: react-app
+    ports:
+      - 3000:3000
+    networks:
+      - shared-network01
+    depends_on:
+      - api-gateway-nginx
+
+# API-gateway
+  api-gateway-nginx:
+    container_name: api-gateway-nginx01
+    image: nginx:stable-perl
+    volumes:
+      - .\nginx\nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - 80:80
+    networks:
+      - shared-network01
+    depends_on:
+      - authorization-service
+      - messages-service
+
+# Kafka
+  kafka:
+    container_name: kafka
+    image: bitnami/kafka:3.7.0
+    ports:
+      - 9094:9092
+      - 9092:9094
+    environment:
+      - KAFKA_ADVERTISED_HOST_NAME=kafka
+      - KAFKA_CFG_NODE_ID=0
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://kafka:9094
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://kafka:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - ALLOW_PLAINTEXT_LISTENER="yes"
+      - KAFKA_LOG_DIR=.\kafka\logs
+    networks:
+      - broker-network
+
+# Redis
+  redis:
+    image: redis:6.2-alpine
+    ports:
+      - '6379:6379'
+    command: redis-server --save 20 1 --loglevel warning
+    volumes: 
+      - "D:/Education/Messenger/redis_data:/data"
+    networks:
+      - broker-network
+
+# Authorization service
+  authorization-service:
+    container_name: authorization-service01
+    build: ./authorization-microservice-api
+    image: authorization-service-api:0.1
+    ports:
+      - 8081:8081
+    depends_on:
+      - db-auth-postgresql
+      - kafka
+      - redis
+    links:
+      - kafka:kafka
+      - redis:redis
+    environment:
+      SERVER_PORT: 8081
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db-auth-postgresql01:5432/auth
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: admin
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    networks:
+      - auth-network01
+      - shared-network01
+      - broker-network
+
+  db-auth-postgresql:
+    container_name: db-auth-postgresql01
+    image: postgres:13
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: auth
+    volumes:
+      - "D:/Education/Messenger/db-data/auth-service01:/var/lib/postgresql/data"
+    networks:
+      - auth-network01
+  
+  
+# Messages and chats service  
+  messages-service:
+    container_name: messages-service01
+    build: ./message-microservice-api
+    image: messages-service-api:0.1
+    ports:
+      - 8082:8082
+    depends_on:
+      - db-message-postgresql
+      - kafka
+      - redis
+    links:
+      - kafka:kafka
+      - redis:redis
+    environment:
+      SERVER_PORT: 8082
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db-message-postgresql01:5432/messanger
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: admin
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    networks:
+      - message-network01
+      - shared-network01
+      - broker-network
+
+  db-message-postgresql:
+    container_name: db-message-postgresql01
+    image: postgres:13
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: messanger
+    volumes:
+      - "D:/Education/Messenger/db-data/message-service01:/var/lib/postgresql/data"
+    networks:
+      - message-network01
